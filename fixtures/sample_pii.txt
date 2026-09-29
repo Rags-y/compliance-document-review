@@ -1,0 +1,9 @@
+Investment Agreement for Jane Smith.
+
+SSN: 987-65-4321
+Email: jane.smith@example.com
+Phone: +1 555-123-4567
+Account: #AC-99120
+Investment amount: $250,000
+
+We guarantee Jane Smith an 18% annual return on investment without any market risk.
