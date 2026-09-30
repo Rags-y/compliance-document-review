@@ -11,12 +11,15 @@ def test_masks_pii():
 
     result = masker.mask(text)
 
+    assert "[CLIENT_1]" in result.masked_text
     assert "[SSN_1]" in result.masked_text
     assert "[EMAIL_1]" in result.masked_text
 
+    assert "Jane Smith" not in result.masked_text
     assert "987-65-4321" not in result.masked_text
     assert "jane.smith@example.com" not in result.masked_text
 
+    assert result.mapping["[CLIENT_1]"] == "Jane Smith"
     assert result.mapping["[SSN_1]"] == "987-65-4321"
     assert result.mapping["[EMAIL_1]"] == "jane.smith@example.com"
 
@@ -31,3 +34,36 @@ def test_clean_text_is_unchanged():
     assert result.masked_text == text
     assert result.entities == []
     assert result.mapping == {}
+
+
+def test_reuses_token_for_repeated_person_name():
+    masker = PIIMasker()
+
+    text = (
+        "Investment Agreement for Jane Smith. "
+        "Jane Smith is the client."
+    )
+
+    result = masker.mask(text)
+
+    assert result.masked_text == (
+        "Investment Agreement for [CLIENT_1]. "
+        "[CLIENT_1] is the client."
+    )
+
+    assert result.mapping == {
+        "[CLIENT_1]": "Jane Smith",
+    }
+
+
+def test_masks_address():
+    masker = PIIMasker()
+
+    text = "Client address: 123 Main Street, New York, NY 10001"
+
+    result = masker.mask(text)
+
+    assert result.masked_text == "Client address: [ADDRESS_1]"
+    assert result.mapping == {
+        "[ADDRESS_1]": "123 Main Street, New York, NY 10001",
+    }

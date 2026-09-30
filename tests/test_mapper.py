@@ -4,7 +4,6 @@ from compliance.models import PIIEntity
 
 def test_creates_tokens():
     mapper = TokenMapper()
-
     token1 = mapper.create_token("SSN")
     token2 = mapper.create_token("SSN")
     token3 = mapper.create_token("EMAIL")
@@ -41,3 +40,30 @@ def test_maps_entities():
 
     assert entities[0].token == "[SSN_1]"
     assert entities[1].token == "[EMAIL_1]"
+
+
+def test_reuses_token_for_same_value():
+    mapper = TokenMapper()
+
+    entities = [
+        PIIEntity(
+            entity_type="PERSON",
+            value="Jane Smith",
+            start=0,
+            end=10,
+        ),
+        PIIEntity(
+            entity_type="PERSON",
+            value="Jane Smith",
+            start=20,
+            end=30,
+        ),
+    ]
+
+    mapping = mapper.map_entities(entities)
+
+    assert entities[0].token == "[CLIENT_1]"
+    assert entities[1].token == "[CLIENT_1]"
+    assert mapping == {
+        "[CLIENT_1]": "Jane Smith",
+    }
