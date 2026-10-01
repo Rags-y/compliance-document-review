@@ -1,4 +1,5 @@
 from compliance.masker import PIIMasker
+from compliance.mapping_store import MappingStore
 
 
 def test_masks_pii():
@@ -66,4 +67,27 @@ def test_masks_address():
     assert result.masked_text == "Client address: [ADDRESS_1]"
     assert result.mapping == {
         "[ADDRESS_1]": "123 Main Street, New York, NY 10001",
+    }
+
+
+def test_masking_stores_mapping_by_document_id(tmp_path):
+    store = MappingStore(storage_dir=str(tmp_path))
+    masker = PIIMasker(mapping_store=store)
+
+    text = "Client Jane Smith has SSN 987-65-4321."
+
+    result = masker.mask(
+        text,
+        document_id="document-001",
+    )
+
+    assert result.masked_text == (
+        "Client [CLIENT_1] has SSN [SSN_1]."
+    )
+
+    stored_mapping = store.get("document-001")
+
+    assert stored_mapping == {
+        "[CLIENT_1]": "Jane Smith",
+        "[SSN_1]": "987-65-4321",
     }
