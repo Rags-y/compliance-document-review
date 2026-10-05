@@ -30,11 +30,12 @@ class PIIDetector:
         "DOLLAR_AMOUNT": re.compile(
             r"(?<!\w)\$\s?\d{1,3}(?:,\d{3})*(?:\.\d{2})?(?!\w)"
         ),
-        "PERSON": re.compile(
-            r"(?:(?i:for|name|client)\s*[:\-]?\s*"
-            r"|(?i:mr|mrs|ms|miss|dr)\.?\s+)"
-            r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)"
-        ),
+       "PERSON": re.compile(
+    r"(?:(?i:for|name|client|review)\s*[:\-]?\s*"
+    r"|(?i:mr|mrs|ms|miss|dr)\.?\s+)"
+    r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)"
+    r"(?:'s)?"
+),
     }
 
     def detect(self, text: str) -> list[PIIEntity]:
