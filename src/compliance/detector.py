@@ -30,9 +30,10 @@ class PIIDetector:
         "DOLLAR_AMOUNT": re.compile(
             r"(?<!\w)\$\s?\d{1,3}(?:,\d{3})*(?:\.\d{2})?(?!\w)"
         ),
-       "PERSON": re.compile(
+      "PERSON": re.compile(
     r"(?:(?i:for|name|client|review)\s*[:\-]?\s*"
-    r"|(?i:mr|mrs|ms|miss|dr)\.?\s+)"
+    r"|(?i:mr|mrs|ms|miss|dr)\.?\s+"
+    r"|(?=[A-Z][a-z]+\s+[A-Z][a-z]+\s+is\s+the\s+client\b))"
     r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)"
     r"(?:'s)?"
 ),
