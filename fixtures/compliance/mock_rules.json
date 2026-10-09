@@ -1,0 +1,83 @@
+
+[
+  {
+    "rule_id": "FINRA-2210",
+    "title": "Fair and balanced communications",
+    "description": "Communications must be fair and balanced and must not contain exaggerated, unwarranted, promissory, or misleading claims.",
+    "keywords": ["guarantee", "guaranteed", "risk-free", "without any risk", "certain return"],
+    "severity": "high",
+    "mock": true
+  },
+  {
+    "rule_id": "ADV-01",
+    "title": "Unsupported performance claims",
+    "description": "Performance claims should have an identifiable and reasonable evidentiary basis.",
+    "keywords": ["proven performance", "best performing", "highest return", "outperforms"],
+    "severity": "medium",
+    "mock": true
+  },
+  {
+    "rule_id": "RET-02",
+    "title": "Misleading return representations",
+    "description": "Representations of investment returns must not create a misleading impression.",
+    "keywords": ["annual return", "monthly return", "investment return", "returns"],
+    "severity": "medium",
+    "mock": true
+  },
+  {
+    "rule_id": "RISK-03",
+    "title": "Risk representation",
+    "description": "Statements about investment risk must not misleadingly imply that an investment has no risk.",
+    "keywords": ["no risk", "zero risk", "risk-free", "without any market risk"],
+    "severity": "high",
+    "mock": true
+  },
+  {
+    "rule_id": "PERF-04",
+    "title": "Historical performance context",
+    "description": "Historical performance should not be presented in a way that implies future results are certain.",
+    "keywords": ["future returns", "past performance", "will earn", "guaranteed returns"],
+    "severity": "medium",
+    "mock": true
+  },
+  {
+    "rule_id": "GUAR-05",
+    "title": "Guaranteed financial outcomes",
+    "description": "Claims promising a guaranteed financial outcome require careful compliance review.",
+    "keywords": ["guarantee", "guaranteed profit", "guaranteed income", "guaranteed return", "guarantee you"],
+    "severity": "high",
+    "mock": true
+  },
+  {
+    "rule_id": "CONFLICT-06",
+    "title": "Potential conflict of interest",
+    "description": "Statements involving incentives or interests that could affect recommendations should be reviewed.",
+    "keywords": ["commission", "incentive", "conflict of interest", "referral fee"],
+    "severity": "medium",
+    "mock": true
+  },
+  {
+    "rule_id": "CLAIM-07",
+    "title": "Absolute or exaggerated claims",
+    "description": "Absolute claims about financial products should be checked for misleading or unsupported wording.",
+    "keywords": ["always wins", "never loses", "best investment", "no downside"],
+    "severity": "high",
+    "mock": true
+  },
+  {
+    "rule_id": "SUPPORT-08",
+    "title": "Claims requiring supporting evidence",
+    "description": "Material factual claims should be supported by appropriate evidence.",
+    "keywords": ["research proves", "scientifically proven", "verified results", "evidence shows"],
+    "severity": "medium",
+    "mock": true
+  },
+  {
+    "rule_id": "PRIV-10",
+    "title": "Sensitive information disclosure",
+    "description": "Disclosure of personal or confidential information should be reviewed for appropriate authorization.",
+    "keywords": ["account number", "social security number", "confidential details", "personal information"],
+    "severity": "high",
+    "mock": true
+  }
+]
