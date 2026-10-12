@@ -18,3 +18,22 @@ class DocumentSection:
     text: str
     start: int
     end: int
+
+
+@dataclass(frozen=True)
+class ComplianceFlag:
+    """A structured compliance finding produced by the inspection agent."""
+
+    passage: str
+    rule_id: str
+    reason: str
+    severity: str
+
+
+@dataclass(frozen=True)
+class InspectionResult:
+    """Structured findings for a single document inspection."""
+
+    flags: tuple[ComplianceFlag, ...]
+    prompt_version: str = "v1"
+    model_id: str = "mock-inspector"
