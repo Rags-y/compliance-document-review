@@ -1,0 +1,41 @@
+﻿[
+  {
+    "case_id": "DISC-001",
+    "description": "Required disclosure is present",
+    "document_text": "Investments involve market risk, including possible loss of principal.",
+    "required_disclosures": [
+      {
+        "disclosure_id": "RISK-DISC-01",
+        "description": "Investment risk disclosure",
+        "required_phrases": ["market risk", "loss of principal"]
+      }
+    ],
+    "expected_status": "PRESENT"
+  },
+  {
+    "case_id": "DISC-002",
+    "description": "Required disclosure is missing",
+    "document_text": "Our investment product is designed for long-term growth.",
+    "required_disclosures": [
+      {
+        "disclosure_id": "RISK-DISC-01",
+        "description": "Investment risk disclosure",
+        "required_phrases": ["market risk", "loss of principal"]
+      }
+    ],
+    "expected_status": "MISSING"
+  },
+  {
+    "case_id": "DISC-003",
+    "description": "Disclosure wording is incomplete",
+    "document_text": "Investments involve market risk.",
+    "required_disclosures": [
+      {
+        "disclosure_id": "RISK-DISC-01",
+        "description": "Investment risk disclosure",
+        "required_phrases": ["market risk", "loss of principal"]
+      }
+    ],
+    "expected_status": "AMBIGUOUS"
+  }
+]
