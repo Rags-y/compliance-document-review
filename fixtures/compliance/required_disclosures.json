@@ -1,0 +1,11 @@
+﻿[
+  {
+    "disclosure_id": "RISK-DISC-01",
+    "description": "Investment risk disclosure (mock requirement)",
+    "required_phrases": [
+      "market risk",
+      "loss of principal"
+    ],
+    "mock": true
+  }
+]

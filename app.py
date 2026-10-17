@@ -1,4 +1,5 @@
 
+import json
 from pathlib import Path
 from threading import Lock
 from uuid import uuid4
@@ -6,6 +7,7 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from compliance.evaluation.disclosure_checker import evaluate_disclosure
 from compliance.inspection.inspector import MockComplianceInspector
 from compliance.inspection.review import (
     HumanReviewWorkflow,
@@ -23,17 +25,17 @@ from compliance.unmasker import PIIUnmasker
 app = FastAPI(
     title="Compliance Document Review",
     description="PII-safe compliance document review demo.",
-    version="0.2.0",
+    version="0.3.0",
 )
 
 mapping_store = MappingStore()
 unmasker = PIIUnmasker(mapping_store=mapping_store)
 
-RULES_PATH = (
-    Path(__file__).resolve().parent
-    / "fixtures"
-    / "compliance"
-    / "mock_rules.json"
+BASE_DIR = Path(__file__).resolve().parent
+
+RULES_PATH = BASE_DIR / "fixtures" / "compliance" / "mock_rules.json"
+DISCLOSURE_REQUIREMENTS_PATH = (
+    BASE_DIR / "fixtures" / "compliance" / "required_disclosures.json"
 )
 
 rule_retriever = MockRuleRetriever(RULES_PATH)
@@ -77,6 +79,39 @@ def create_masker() -> PIIMasker:
         mapper=TokenMapper(),
         mapping_store=mapping_store,
     )
+
+
+def load_disclosure_requirements() -> list[dict]:
+    """Load the configured mock disclosure requirements."""
+    requirements = json.loads(
+        DISCLOSURE_REQUIREMENTS_PATH.read_text(encoding="utf-8-sig")
+    )
+
+    if not isinstance(requirements, list):
+        raise ValueError("Disclosure requirements must be a JSON list.")
+
+    for requirement in requirements:
+        if not isinstance(requirement, dict):
+            raise ValueError("Each disclosure requirement must be a JSON object.")
+
+        if not isinstance(requirement.get("disclosure_id"), str):
+            raise ValueError("Each disclosure must have a string disclosure_id.")
+
+        if not isinstance(requirement.get("description"), str):
+            raise ValueError("Each disclosure must have a string description.")
+
+        phrases = requirement.get("required_phrases")
+        if (
+            not isinstance(phrases, list)
+            or not phrases
+            or any(not isinstance(phrase, str) or not phrase.strip()
+                   for phrase in phrases)
+        ):
+            raise ValueError(
+                "Each disclosure must contain non-empty required phrases."
+            )
+
+    return requirements
 
 
 @app.get("/")
@@ -157,13 +192,32 @@ def inspect_document(request: InspectRequest):
             request.text,
             document_id=document_id,
         )
+        masked_text = masked_result.masked_text
 
-        # Inspect and ground findings against masked text only.
-        inspection = inspector.inspect(masked_result.masked_text)
-        validated = validator.validate(
-            inspection,
-            masked_result.masked_text,
-        )
+        # Existing mock inspection and validation run on masked text.
+        inspection = inspector.inspect(masked_text)
+        validated = validator.validate(inspection, masked_text)
+
+        # Evaluate configured mock disclosures against masked text.
+        disclosures = []
+
+        for requirement in load_disclosure_requirements():
+            evaluation = evaluate_disclosure(
+                masked_text,
+                requirement["required_phrases"],
+            )
+
+            disclosures.append(
+                {
+                    "disclosure_id": requirement["disclosure_id"],
+                    "description": requirement["description"],
+                    "status": evaluation["status"].value,
+                    "found_phrases": evaluation["found_phrases"],
+                    "missing_phrases": evaluation["missing_phrases"],
+                    "mock": requirement.get("mock", True),
+                }
+            )
+
     except Exception:
         raise HTTPException(
             status_code=500,
@@ -175,7 +229,7 @@ def inspect_document(request: InspectRequest):
 
     return {
         "document_id": document_id,
-        "masked_text": masked_result.masked_text,
+        "masked_text": masked_text,
         "findings": [
             {
                 "passage": flag.passage,
@@ -188,6 +242,7 @@ def inspect_document(request: InspectRequest):
             for flag in validated.flags
         ],
         "rejected_findings": validated.rejected_count,
+        "disclosures": disclosures,
         "review": {
             "status": ReviewStatus.PENDING_REVIEW.value,
             "final_decision_by_ai": False,
