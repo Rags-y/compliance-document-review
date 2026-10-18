@@ -1,487 +1,208 @@
-# Compliance Document Review — PII Security & Masking Service
+# Compliance Document Review
 
-A privacy-first PII masking layer for an AI-powered compliance document review system.
-
-This project implements the Service 1 — PII Security & Masking Service from the larger Compliance Document Review architecture.
-
-The service ensures that sensitive personally identifiable information (PII) is detected and replaced with safe document-scoped tokens before document content is sent to an external AI/LLM service.
-
+A Python-based compliance document review demo that combines PII masking, rule-based compliance inspection, disclosure checks, and human review in a FastAPI application.
 
 ## Overview
 
-The intended compliance review architecture is:
+The project demonstrates a privacy-aware workflow for reviewing financial documents. It replaces detected personally identifiable information (PII) with tokens, inspects the masked text for potential compliance concerns, checks required disclosures, and allows a human reviewer to approve or reject a document.
 
-```text
-Raw Document
-     |
-     v
-PII Masking & Security Layer
-     |
-     v
-Masked Document
-     |
-     v
-AI / LLM Service
-     |
-     v
-Compliance Analysis
-     |
-     v
-Human Review
-     |
-     v
-Unmask / Rehydrate for Authorized UI
+### Core services
 
+**1. PII Masking and Privacy Layer**
+- Detects supported PII categories, including names, SSNs, email addresses, phone numbers, account identifiers, and dollar amounts.
+- Replaces detected values with tokens such as `[CLIENT_1]` and `[EMAIL_1]`.
+- Maintains the original-value mapping on the server side.
+- Supports restoration of original values through an unmasking endpoint.
+- Provides a simulated outbound AI payload to demonstrate the intended privacy boundary.
 
-The current implementation focuses on the PII Security & Masking Layer.
-The main security principle is:
-Raw PII should never be included in outbound AI payloads.
+**2. Compliance Inspection**
+- Inspects masked text using mock compliance rules.
+- Returns structured findings containing the matched passage, rule ID, reason, severity, and character offsets.
+- Validates inspection findings and reports rejected findings.
+- Checks configured disclosure requirements and identifies found and missing phrases.
+
+**3. Disclosure Evaluation and Human Review**
+- Evaluates disclosure presence using configurable required phrases.
+- Classifies disclosure checks as `PRESENT`, `MISSING`, or `AMBIGUOUS`.
+- Creates a pending review record for inspected documents.
+- Allows a human reviewer to approve or reject a document and record a comment.
+- Keeps the final review decision separate from the automated inspection output.
+
+## Workflow
+
+1. Submit a document for inspection.
+2. Mask detected PII and retain its mapping on the server.
+3. Inspect the masked text against mock compliance rules.
+4. Evaluate required disclosures.
+5. Create a `PENDING_REVIEW` record.
+6. Have a reviewer approve or reject the document.
+7. Restore original values when authorized and needed.
+
+## Technology Stack
+
+- Python
+- FastAPI
+- Uvicorn
+- Pydantic
+- Pytest
+- JSON-based mock compliance rules and evaluation fixtures
+
+## Project Setup
+
+### Requirements
+
+- Python 3.13 or a compatible Python version
+- pip
+- PowerShell on Windows (commands below use PowerShell)
+
+### Installation
+
+Clone or open the project repository, then navigate to its root directory:
+
+```powershell
+cd path\to\compliance-document-review
 ```
 
-## Features
+Create and activate a virtual environment:
 
-Detect common PII using regex and heuristics
-Replace detected PII with safe tokens
-Maintain stable tokens for repeated PII within a document
-Store original PII mappings server-side
-Restore original PII when authorized using the document ID
-Mask content before LLM requests
-Mask content before embedding requests
-Verify serialized outbound AI payloads contain no raw PII
-Document-specific token mapping
-FastAPI REST API
-Swagger/OpenAPI documentation
-Adversarial PII security tests
-API integration tests
-Clean non-PII text passes through unchanged
-Supported PII Types
-
-The current detector supports:
-
-PII Type	Example	Replacement
-Person name	Jane Smith	[CLIENT_1]
-SSN	987-65-4321	[SSN_1]
-Email	jane.smith@example.com	[EMAIL_1]
-Phone	+1 555-123-4567	[PHONE_1]
-Account number	AC-99120	[ACCOUNT_1]
-Address	Address: 123 Main Street, New York, NY 10001	[ADDRESS_1]
-Dollar amount	$250,000	[AMOUNT_1]
-
-The detector intentionally uses conservative patterns to reduce false positives.
-
-Example
-Input
-Investment Agreement for Jane Smith
-(SSN: 987-65-4321, Account #AC-99120).
-
-We guarantee Jane Smith an 18% annual return
-on investment without any market risk.
-Masked output
-Investment Agreement for [CLIENT_1]
-(SSN: [SSN_1], Account [ACCOUNT_1]).
-
-We guarantee [CLIENT_1] an 18% annual return
-on investment without any market risk.
-Server-side mapping
-[CLIENT_1]  -> Jane Smith
-[SSN_1]     -> 987-65-4321
-[ACCOUNT_1] -> AC-99120
-
-The mapping is stored server-side and is not included in the outbound AI payload.
-
-## Project Structure
-
-compliance-document-review/
-│
-├── src/
-│   └── compliance/
-│       ├── __init__.py
-│       ├── models.py
-│       ├── detector.py
-│       ├── masker.py
-│       ├── mapper.py
-│       ├── mapping_store.py
-│       ├── unmasker.py
-│       └── interceptor.py
-│
-├── tests/
-│   ├── test_detector.py
-│   ├── test_masker.py
-│   ├── test_mapper.py
-│   ├── test_mapping_store.py
-│   ├── test_unmasker.py
-│   ├── test_interceptor.py
-│   ├── test_security.py
-│   ├── test_adversarial_pii.py
-│   └── test_api.py
-│
-├── fixtures/
-│   ├── sample_pii.txt
-│   └── sample_clean.txt
-│
-├── data/
-│   └── mappings/
-│
-├── docs/
-│   └── MASKER_LIMITATIONS.md
-│
-├── app.py
-├── pytest.ini
-├── requirements.txt
-├── README.md
-└── .gitignore
-
-## Core Components
-
-PIIDetector
-
-Detects PII using regex and conservative heuristics.
-
-Document
-   |
-   v
-PIIDetector
-   |
-   v
-PIIEntity objects
-
-Each detected entity contains:
-
-entity type
-original value
-start offset
-end offset
-assigned token
-TokenMapper
-
-Creates document-scoped tokens.
-
-For example:
-
-Jane Smith -> [CLIENT_1]
-Jane Smith -> [CLIENT_1]
-
-Repeated occurrences of the same PII value within the same masking operation reuse the same token.
-
-Different documents receive their own token numbering.
-
-MappingStore
-
-Stores mappings using the document ID:
-
-document_id
-     |
-     v
-server-side mapping
-
-Example:
-
-data/mappings/investment-agreement-demo.json
-
-Mapping files contain sensitive information and are excluded from Git through .gitignore.
-
-PIIMasker
-
-Coordinates:
-
-Detector
-   +
-Token Mapper
-   +
-Mapping Store
-
-and produces:
-
-MaskingResult
-├── masked_text
-├── entities
-└── mapping
-
-
-PIIUnmasker
-
-Restores the original values using the document-specific mapping.
-
-[CLIENT_1]
-    |
-    v
-Jane Smith
-
-
-MaskedLlmClient
-
-Provides the privacy boundary for downstream AI operations.
-
-It exposes:
-
-complete()
-embed()
-
-Both methods mask the input before passing it to the downstream client.
-
-Conceptually:
-
-Application
-     |
-     v
-MaskedLlmClient
-     |
-     v
-PIIMasker
-     |
-     v
-Masked payload
-     |
-     v
-External AI service
-
-
-## FastAPI Demo
-
-The project includes a FastAPI demonstration application.
-
-Start the server with:
-
-uvicorn app:app --reload
-
-Open the Swagger interface:
-
-http://127.0.0.1:8000/docs
-API Endpoints
-GET /
-
-Health check.
-
-Example response:
-
-{
-  "service": "Compliance Document Review",
-  "status": "running",
-  "privacy_layer": "enabled"
-}
-POST /mask
-
-Masks PII in a document.
-
-Example request:
-
-{
-  "document_id": "investment-agreement-demo",
-  "text": "Investment Agreement for Jane Smith (SSN: 987-65-4321, Account #AC-99120)."
-}
-
-Example response:
-
-{
-  "document_id": "investment-agreement-demo",
-  "masked_text": "Investment Agreement for [CLIENT_1] (SSN: [SSN_1], Account [ACCOUNT_1]).",
-  "detected_entities": [
-    {
-      "type": "PERSON",
-      "token": "[CLIENT_1]"
-    },
-    {
-      "type": "SSN",
-      "token": "[SSN_1]"
-    },
-    {
-      "type": "ACCOUNT",
-      "token": "[ACCOUNT_1]"
-    }
-  ]
-}
-
-POST /simulate-ai
-
-Simulates the payload that would be sent to an external AI service.
-
-Example:
-
-{
-  "document_id": "investment-agreement-demo",
-  "text": "Review Jane Smith's account AC-99120. Her SSN is 987-65-4321."
-}
-
-The simulated outbound payload contains:
-
-{
-  "prompt": "Review [CLIENT_1]'s account [ACCOUNT_1]. Her SSN is [SSN_1]."
-}
-
-The API also reports:
-
-{
-  "raw_pii_sent": false,
-  "mapping_kept_server_side": true
-}
-
-POST /unmask
-
-Restores original PII using the document-specific mapping.
-
-Example:
-
-{
-  "document_id": "investment-agreement-demo",
-  "text": "Agreement for [CLIENT_1]. SSN: [SSN_1]."
-}
-
-The response contains the restored text.
-
-## Testing
-
-The project uses pytest.
-
-Run the complete test suite:
-
-pytest -q
-
-Current test status:
-
-41 passed
-
-The tests cover:
-
-PII detection
-PII masking
-token mapping
-document-specific mappings
-mapping persistence
-unmasking
-LLM interception
-embedding interception
-serialized outbound payload security
-adversarial PII cases
-API endpoints
-clean/non-PII text
-error handling
-Security Validation
-
-One of the key acceptance criteria is that raw PII must not appear in an outbound AI request.
-
-The test suite verifies that serialized outbound payloads do not contain values such as:
-
-Jane Smith
-987-65-4321
-AC-99120
-jane.smith@example.com
-
-while safe tokens such as:
-
-[CLIENT_1]
-[SSN_1]
-[ACCOUNT_1]
-[EMAIL_1]
-
-remain available to the AI system.
-
-## Adversarial Testing
-
-The project includes security-oriented tests for:
-
-multiple PII types
-repeated PII
-safe financial terms
-normal business text
-clean documents
-contextual person-name detection
-masking multiple entities
-preventing accidental replacement of non-PII terms
-
-For example, financial terminology such as:
-
-S&P 500
-
-should remain unchanged.
-
-Privacy Boundary
-
-The system separates:
-
-Data sent to AI
-Masked document
-
-from:
-
-Data retained by the server
-Token -> Original PII
-
-The mapping is never intentionally included in the AI payload.
-
-This creates a clear privacy boundary between the application server and downstream AI services.
-
-## Known Limitations
-
-The current implementation is intentionally focused on a practical PII masking milestone.
-
-Current limitations include:
-
-Detection is regex/heuristic based.
-Person-name detection is conservative.
-Address detection currently targets a specific address format.
-Detection is not equivalent to a full NER-based PII system.
-Mapping storage is file-based for the current prototype.
-Mapping files require appropriate production access controls and encryption.
-PDF/DOCX ingestion is not implemented in this service milestone.
-The compliance rule engine and compliance inspection agent are separate future services.
-The current API demonstrates the privacy boundary but does not connect to a production LLM provider.
-
-See:
-
-docs/MASKER_LIMITATIONS.md
-
-for additional detector limitations.
-
-## Running the Project
-
-1. Create and activate a virtual environment
-
-Windows PowerShell:
-
+```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-2. Install dependencies
-pip install -r requirements.txt
-3. Run tests
-pytest -q
-4. Start the API
+```
+
+Install dependencies:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+Configure the Python import path:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+```
+
+Start the API server:
+
+```powershell
 uvicorn app:app --reload
-5. Open Swagger
-http://127.0.0.1:8000/docs
-## Future Architecture
+```
 
-The larger system can build on this privacy layer:
+The API will be available at:
 
-                  ┌──────────────────────────┐
-                  │      Raw Document        │
-                  └────────────┬─────────────┘
-                               │
-                               v
-                  ┌──────────────────────────┐
-                  │ Service 1                │
-                  │ PII Masking & Security   │
-                  └────────────┬─────────────┘
-                               │
-                         Masked Document
-                               │
-                               v
-                  ┌──────────────────────────┐
-                  │ Service 2                │
-                  │ AI Compliance Inspection │
-                  └────────────┬─────────────┘
-                               │
-                               v
-                  ┌──────────────────────────┐
-                  │ Service 3                │
-                  │ Rules / Absence / Eval   │
-                  └────────────┬─────────────┘
-                               │
-                               v
-                  ┌──────────────────────────┐
-                  │ Human Officer Review     │
-                  └──────────────────────────┘
+- Base URL: `http://127.0.0.1:8000`
+- Interactive API documentation: `http://127.0.0.1:8000/docs`
+- OpenAPI schema: `http://127.0.0.1:8000/openapi.json`
 
-The current repository provides the privacy foundation required before sensitive document content is exposed to downstream AI systems.
+Keep the server running while making API requests.
+
+## API Endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/` | Check service health |
+| POST | `/mask` | Mask detected PII in text |
+| POST | `/unmask` | Restore original values using the document mapping |
+| POST | `/simulate-ai` | Generate a simulated AI payload from masked text |
+| POST | `/inspect` | Run compliance inspection and disclosure checks |
+| GET | `/review/{document_id}` | Retrieve the current review record |
+| POST | `/review/{document_id}` | Submit a human review decision |
+
+### Example request bodies
+
+**Mask text — `POST /mask`**
+
+```json
+{
+  "text": "Investment agreement for Jane Smith. Email: jane.smith@example.com"
+}
+```
+
+**Simulate outbound AI payload — `POST /simulate-ai`**
+
+```json
+{
+  "document_id": "YOUR_DOCUMENT_ID",
+  "text": "Investment agreement for Jane Smith."
+}
+```
+
+**Inspect a document — `POST /inspect`**
+
+```json
+{
+  "text": "We guarantee an 18% annual return without any market risk."
+}
+```
+
+**Unmask text — `POST /unmask`**
+
+```json
+{
+  "document_id": "YOUR_DOCUMENT_ID",
+  "text": "Investment agreement for [CLIENT_1]. Email: [EMAIL_1]"
+}
+```
+
+**Submit a human review — `POST /review/{document_id}`**
+
+```json
+{
+  "decision": "REJECTED",
+  "reviewer_id": "demo-reviewer",
+  "comment": "Potentially misleading return claim; further review required."
+}
+```
+
+Valid review decisions are `PENDING_REVIEW`, `APPROVED`, and `REJECTED`. Use `APPROVED` or `REJECTED` when submitting a final reviewer decision.
+
+Refer to `/docs` for the complete request schemas and response structures.
+
+## Running Tests
+
+Set the source path before running tests:
+
+```powershell
+$env:PYTHONPATH = "$PWD\src"
+python -m pytest -q
+```
+
+### Verified results
+
+- Automated test suite: **80 passed**
+- Disclosure evaluation: **3 passed, 0 failed**
+- Disclosure fixture accuracy: **100% (3 of 3 cases)**
+
+Run the disclosure evaluation independently:
+
+```powershell
+python -c "from compliance.evaluation.harness import evaluate_disclosure_cases; import json; r = evaluate_disclosure_cases('fixtures/compliance/disclosure_cases.json'); print(json.dumps({k:v for k,v in r.items() if k != 'results'}, indent=2))"
+```
+
+The disclosure evaluation uses a small set of predefined JSON fixtures. Its accuracy result applies only to those cases; it is not a measurement of overall regulatory compliance accuracy.
+
+## Sample Data
+
+The `fixtures/` directory contains sample documents and mock compliance data used for development and testing.
+
+- `sample_pii.txt` — sample financial document containing PII and potentially problematic financial claims.
+- `sample_clean.txt` — sample text with general financial-risk statements.
+- `compliance/required_disclosures.json` — configured disclosure requirements.
+- `compliance/disclosure_cases.json` — expected outcomes for disclosure evaluation.
+- `compliance/mock_rules.json` — mock rules used for compliance inspection.
+
+## Important Limitations
+
+- **Mock inspection:** compliance findings are generated using mock rules and inspection components. They are not authoritative legal or regulatory determinations.
+- **Simulated AI integration:** `/simulate-ai` demonstrates a masked outbound payload; it does not call an external AI service.
+- **Detection limitations:** PII detection is limited to the patterns and categories supported by the implementation. Undetected sensitive information may remain in text.
+- **In-memory state:** original-value mappings and review records are held in application memory. Restarting the server may clear them.
+- **Evaluation scope:** the included disclosure evaluation uses only three predefined cases and does not establish production readiness.
+- **Production hardening:** persistent storage, authentication, authorization, audit logging, stronger privacy controls, and broader testing would be needed before handling real sensitive documents.
+
+## Project Goal
+
+The goal is to demonstrate a modular compliance review workflow that separates PII masking, automated inspection, disclosure evaluation, and human decision-making while keeping original-value mappings on the server side.
 
 ## Author
 Raghav Kumar
